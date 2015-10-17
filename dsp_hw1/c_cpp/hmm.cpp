@@ -10,6 +10,8 @@
 #include <vector>
 #include <sstream>
 #include <cstdlib>
+#include <algorithm>
+//#include <iterator>
 
 #include "hmm.h"
 using namespace std;
@@ -58,14 +60,14 @@ void HMMmodel::loadModel(string  fileName){
 		else if(paramType=="observation:"){
 			_numObsType = param; //??? Is it right?
 
-			_emisProb.resize(_numState);
-			for(size_t i=0;i<_numState;++i)
-				_emisProb[i].resize(_numObsType);
+			_emisProb.resize(_numObsType);
+			for(size_t i=0;i<_numObsType;++i)
+				_emisProb[i].resize(_numState);
 			
-			for(size_t i=0;i<_numState;++i){
+			for(size_t i=0;i<_numObsType;++i){
 				getline(model,line);
 				istringstream token(line);
-				for(size_t j=0;j<_numObsType;++j)
+				for(size_t j=0;j<_numState;++j)
 					token >> _emisProb[i][j];
 			}
 		}
@@ -87,7 +89,6 @@ void HMMmodel::train(size_t numIters,string seqsFileName){
 	while(getline(trainData,obsSeq)){
 		obsSeqs.push_back(obsSeq);
 	}
-	
 	
 	if(obsSeqs.size() !=0){
 		numTimeFrame = obsSeqs[0].length();
@@ -126,43 +127,68 @@ void HMMmodel::train(size_t numIters,string seqsFileName){
 
 	trainData.close();
 }
-double HMMmodel::test(string resultFile ,string seqsFileName,string accFileName)
+void HMMmodel::testInit(size_t numTimeFrame){
 
-double HMMmodel::vitrebi(string const& obsSeq){
-	
+	_delta.resize(numTimeFrame);
+	for(size_t i=0;i<numTimeFrame;++i)
+		_delta[i].resize(_numState);
+}
+
+double HMMmodel::viterbi(string const& obsSeq){
+	//find delta
+	//base case
+	for(size_t state=0;state<_numState;++state){
+		//_delta[0][state].prob = _initProb[state] * _emisProb[obsSeq[0]-'A'][state]
+		_delta[0][state] = _initProb[state] * _emisProb[obsSeq[0]-'A'][state];
+	}
+	//recursive case
+	for(size_t time=1;time<obsSeq.length();++time){
+		for(size_t state=0;state<_numState;++state){
+			vector<double> probs;
+			probs.resize(_numState);
+
+			for(size_t fromState;fromState<_numState;++fromState){
+				probs[fromState] = (_delta[time-1][fromState]*_transProb[state][fromState]);
+			}
+			//_delta[time][state].prob = max(probs) * _emisProb[obsSeq[time]-'A'][state];
+			_delta[time][state] = *(max_element(probs.begin(),probs.end())) * _emisProb[obsSeq[time]-'A'][state];
+			//_delta[time][state].fromStatePtr = &(_delta[time-1][distance(probs.begin(),max_element(probs.begin(),probs.end()))])
+		}
+	}
+	//the last , return the largest prob
+	return *(max_element(_delta[obsSeq.length()-1].begin(),_delta[obsSeq.length()-1].end()));
 }
 
 void HMMmodel::writeModel(string fileName)const{
 	ofstream storage;
 	storage.open(fileName);
-	ostringstream message;
+	//ostringstream storage;
 
-	message << "initial: " << _numState << endl;
+	storage << "initial: " << _numState << endl;
  	for(size_t  i=0;i<_numState ;++i){
-		message << _initProb[i] << '\t';
+		storage << _initProb[i] << '\t';
 	}
-	message << endl << endl;
+	storage << endl << endl;
 
-	message << "transition: " << _numState << endl;
+	storage << "transition: " << _numState << endl;
 	for(size_t i=0;i<_numState;++i){
 		for(size_t j=0;j<_numState;++j)
-			message << _transProb[i][j] << '\t';
-		message << endl;
+			storage << _transProb[i][j] << '\t';
+		storage << endl;
 	}
-	message << endl;
+	storage << endl;
 
-	message << "observation: " << _numObsType << endl;
- 	for(size_t i=0;i<_numState;++i){
-		for(size_t j=0;j<_numObsType;++j)
-			message << _emisProb[i][j] << '\t';
-		message << endl;
+	storage << "observation: " << _numObsType << endl;
+ 	for(size_t i=0;i<_numObsType;++i){
+		for(size_t j=0;j<_numState;++j)
+			storage << _emisProb[i][j] << '\t';
+		storage << endl;
 	}
-	storage << message.str();
 	storage.close();
 
 }
 
- void HMMmodel::BaumWeltch(const string& obsSeq){
+void HMMmodel::BaumWeltch(const string& obsSeq){
 	//forward --> calculate alpha
 
 	//base case
@@ -174,7 +200,7 @@ void HMMmodel::writeModel(string fileName)const{
 			for(size_t fromState=0;fromState<_numState;++fromState){
 				_alpha[timeFrame][desState]+=_alpha[timeFrame-1][fromState] * _transProb[desState][fromState];
 			}
-			_alpha[timeFrame][desState] *= _emisProb[desState][obsSeq[timeFrame]-'A'];
+			_alpha[timeFrame][desState] *= _emisProb[obsSeq[timeFrame]-'A'][desState];
 		}
 	}
 
@@ -187,7 +213,7 @@ void HMMmodel::writeModel(string fileName)const{
 	for(int timeFrame=obsSeq.length()-2;timeFrame>=0;--timeFrame){
 		for(size_t fromState=0;fromState<_numState;++fromState){
 			for(size_t desState=0;desState<_numState;++desState){
-				_beta[timeFrame][fromState] += (_beta[timeFrame+1][desState] * _transProb[desState][fromState] * _emisProb[desState][obsSeq[timeFrame+1]-'A']);
+				_beta[timeFrame][fromState] += (_beta[timeFrame+1][desState] * _transProb[desState][fromState] * _emisProb[obsSeq[timeFrame+1]-'A'][desState]);
 			}
 		}
 	}
@@ -211,12 +237,12 @@ void HMMmodel::writeModel(string fileName)const{
 		double normFactor=0.0;
 		for(size_t from=0;from<_numState;++from){
 			for(size_t to=0;to<_numState;++to){
-				normFactor += (_alpha[timeFrame][from] * _transProb[to][from] * _emisProb[to][obsSeq[timeFrame+1]-'A'] * _beta[timeFrame+1][to]);
+				normFactor += (_alpha[timeFrame][from] * _transProb[to][from] * _emisProb[obsSeq[timeFrame+1]-'A'][to] * _beta[timeFrame+1][to]);
 			}
 
 		for(size_t from=0;from<_numState;++from){
 			for(size_t to=0;to<_numState;++to){
-				_eps[timeFrame][to][from] = (_alpha[timeFrame][from] * _transProb[to][from] * _emisProb[to][obsSeq[timeFrame+1]-'A'] * _beta[timeFrame+1][to]) / normFactor;
+				_eps[timeFrame][to][from] = (_alpha[timeFrame][from] * _transProb[to][from] * _emisProb[obsSeq[timeFrame+1]-'A'][to] * _beta[timeFrame+1][to]) / normFactor;
 			}
 		}
 		}
@@ -259,7 +285,7 @@ void HMMmodel::update(size_t numObsSeqs,size_t numTimeFrame){
 			denominator += _gamma[time][state].value;
 		}
 		for(size_t obs=0;obs<_numObsType;++obs){
-			_emisProb[state][obs] = (numerator[obs] / denominator);
+			_emisProb[obs][state] = (numerator[obs] / denominator);
 		}
 	}
 }
@@ -285,14 +311,14 @@ void HMMmodel::normalizeProb(){
 		}
 	}
 
-	for(size_t obs=0;obs <_numObsType;++obs){
+	for(size_t state=0;state <_numObsType;++state){
 		double normFactor=0.0;
-		for(size_t state=0;state<_numState;++state){
-			normFactor += _emisProb[state][obs];
+		for(size_t obs=0;obs<_numObsType;++obs){
+			normFactor += _emisProb[obs][state];
 		}
 
-		for(size_t state=0;state<_numState;++state){
-			_emisProb[state][obs] /= normFactor;
+		for(size_t obs=0;obs<_numObsType;++obs){
+			_emisProb[obs][state] /= normFactor;
 		}
 	}
 }

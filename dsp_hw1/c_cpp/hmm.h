@@ -20,11 +20,18 @@ struct Gamma
 	char obs;
 };
 
-struct Delta
-{
-	size_t fromState;
-	double prob;
-};
+//class Delta
+//{
+//public:
+	//friend class HMMmodel;
+	//Delta(){
+		//fromStatePtr = NULL;
+		//prob = 0.0;
+	//}
+//private:
+	//double* fromStatePtr;
+	//double prob;
+//};
 
 class HMMmodel
 {
@@ -38,8 +45,10 @@ public:
 
 	//Main
 	void train(size_t numIters,string seqsFileName);
-	void test(string resultFile,string seqsFileName,string accFileName=string("acc.txt"));
+	void testInit(size_t numTimeFrame);
+	double viterbi(const string& obsSeq);
 
+	//debug
 	void viewParam()const;
 
 private:
@@ -52,10 +61,10 @@ private:
 	vector< vector<double> > _beta;
 	vector< vector<Gamma> > _gamma;
 	vector< vector< vector<double> > >_eps;
-	vector< vector<Delta> > _delta;
+	//vector< vector<Delta> > _delta;
+	vector< vector<double> > _delta;
 
 	size_t _numState;
-	size_t _obsLen;
 	size_t _numObsType;
 
 
@@ -63,10 +72,8 @@ private:
 	void BaumWeltch(const string& obsSeq);
 	void update(size_t numObsSeqs,size_t numTimeFrame);
 
-	//find best seq
-	double viterbi(const string& obsSeq);
 	
-	/**helper function**/
+	//helper function
 	void resetParam(size_t obsSeqLen);
 	void normalizeProb();
 };
