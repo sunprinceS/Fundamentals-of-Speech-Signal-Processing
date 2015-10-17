@@ -7,16 +7,17 @@ CXX = g++
 CFLAGS = -g -Wall -std=c++0x
 CSRCS     = $(wildcard *.cpp)
 COBJS  = $(addsuffix .o, $(basename $(CSRCS)))
+EXEC = test train
 
-all: train test
+all: $(EXEC)
 
 train: train.o hmm.o
+	@echo "> Building $@"
 	@$(CXX) $(CFLAGS) $^ -o $@
-	@echo "> $@ is ready!"
 
 test: test.o hmm.o
+	@echo "> Building $@"
 	@$(CXX) $(CFLAGS) $^ -o $@
-	@echo "> $@ is ready!"
 
 %.o: %.cpp
 	@echo "> compiling: $<"
@@ -24,3 +25,4 @@ test: test.o hmm.o
 
 clean:
 	@$(RM) $(COBJS)   # type make clean to remove the compiled file
+	@$(RM) $(EXEC)

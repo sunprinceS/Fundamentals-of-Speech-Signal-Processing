@@ -20,7 +20,7 @@ HMMmodel::HMMmodel(string fileName){
 	loadModel(fileName);
 }
 HMMmodel::~HMMmodel(){};
-void HMMmodel::loadModel(string  fileName){
+void HMMmodel::loadModel(string fileName){
 	ifstream model;
 	model.open(fileName);
 	string line;
@@ -78,14 +78,12 @@ void HMMmodel::loadModel(string  fileName){
 	model.close();
 }
 void HMMmodel::train(size_t numIters,string seqsFileName){
-	vector<string> obsSeqs;
 	ifstream trainData;
-	trainData.open(seqsFileName);
-
-	//init
+	vector<string> obsSeqs;
 	string obsSeq;
 	size_t numTimeFrame=0;
 
+	trainData.open(seqsFileName);
 	while(getline(trainData,obsSeq)){
 		obsSeqs.push_back(obsSeq);
 	}
@@ -97,6 +95,8 @@ void HMMmodel::train(size_t numIters,string seqsFileName){
 		cerr << "No training data when training...\nleaving";
 		exit(1);
 	}
+
+	//initial param
 	_alpha.resize(numTimeFrame);
 	for(size_t i=0;i<numTimeFrame;++i)
 		_alpha[i].resize(_numState);
@@ -119,7 +119,6 @@ void HMMmodel::train(size_t numIters,string seqsFileName){
 	for(size_t iter=0;iter<numIters;++iter){
 		for(auto it=obsSeqs.begin();it!=obsSeqs.end();++it){
 			BaumWeltch(*it);
-			//viewParam();
 		}
 		update(obsSeqs.size(),numTimeFrame);
 		normalizeProb();
@@ -128,21 +127,22 @@ void HMMmodel::train(size_t numIters,string seqsFileName){
 	trainData.close();
 }
 void HMMmodel::testInit(size_t numTimeFrame){
-
 	_delta.resize(numTimeFrame);
 	for(size_t i=0;i<numTimeFrame;++i)
 		_delta[i].resize(_numState);
 }
 
 double HMMmodel::viterbi(string const& obsSeq){
-	//find delta
+	//calculate delta
+	
 	//base case
 	for(size_t state=0;state<_numState;++state){
 		//_delta[0][state].prob = _initProb[state] * _emisProb[obsSeq[0]-'A'][state]
 		_delta[0][state] = _initProb[state] * _emisProb[obsSeq[0]-'A'][state];
 	}
+
 	//recursive case
-	for(size_t time=1;time<obsSeq.length();++time){
+	 for(size_t time=1;time<obsSeq.length();++time){
 		for(size_t state=0;state<_numState;++state){
 			vector<double> probs;
 			probs.resize(_numState);
@@ -155,14 +155,13 @@ double HMMmodel::viterbi(string const& obsSeq){
 			//_delta[time][state].fromStatePtr = &(_delta[time-1][distance(probs.begin(),max_element(probs.begin(),probs.end()))])
 		}
 	}
-	//the last , return the largest prob
+	//Return the largest prob.
 	return *(max_element(_delta[obsSeq.length()-1].begin(),_delta[obsSeq.length()-1].end()));
 }
 
 void HMMmodel::writeModel(string fileName)const{
 	ofstream storage;
 	storage.open(fileName);
-	//ostringstream storage;
 
 	storage << "initial: " << _numState << endl;
  	for(size_t  i=0;i<_numState ;++i){
@@ -205,9 +204,11 @@ void HMMmodel::BaumWeltch(const string& obsSeq){
 	}
 
 	//backward --> calculate beta
+	//
 	//base case
 	for(size_t i=0;i<_numState;++i)
 		_beta[obsSeq.length()-1][i] = 1;
+
 	//recursive case
 	//!!!!!MUST USE INT!!!!!
 	for(int timeFrame=obsSeq.length()-2;timeFrame>=0;--timeFrame){
@@ -240,15 +241,15 @@ void HMMmodel::BaumWeltch(const string& obsSeq){
 				normFactor += (_alpha[timeFrame][from] * _transProb[to][from] * _emisProb[obsSeq[timeFrame+1]-'A'][to] * _beta[timeFrame+1][to]);
 			}
 
-		for(size_t from=0;from<_numState;++from){
-			for(size_t to=0;to<_numState;++to){
-				_eps[timeFrame][to][from] = (_alpha[timeFrame][from] * _transProb[to][from] * _emisProb[obsSeq[timeFrame+1]-'A'][to] * _beta[timeFrame+1][to]) / normFactor;
+			for(size_t from=0;from<_numState;++from){
+				for(size_t to=0;to<_numState;++to){
+					_eps[timeFrame][to][from] = (_alpha[timeFrame][from] * _transProb[to][from] * _emisProb[obsSeq[timeFrame+1]-'A'][to] * _beta[timeFrame+1][to]) / normFactor;
+				}
 			}
-		}
 		}
 	}
 
-	//reset param
+	//reset param(alpha and beta)
 	resetParam(obsSeq.length());
 }
 void HMMmodel::update(size_t numObsSeqs,size_t numTimeFrame){
@@ -274,7 +275,6 @@ void HMMmodel::update(size_t numObsSeqs,size_t numTimeFrame){
 
 	//new emission prob.
 	for(size_t state=0;state<_numState;++state){
-		//init
 		double denominator = 0.0;
 		double numerator[_numObsType];
 		for(size_t i=0;i<_numObsType;++i)
@@ -292,6 +292,7 @@ void HMMmodel::update(size_t numObsSeqs,size_t numTimeFrame){
 
 void HMMmodel::normalizeProb(){
 
+    //init prob
 	double normFactor=0.0;
 	for(size_t i=0;i<_numState;++i){
 		normFactor += _initProb[i];
@@ -300,6 +301,7 @@ void HMMmodel::normalizeProb(){
 		_initProb[i] /= normFactor;
 	}
 
+    //transition prob
 	for(size_t from=0;from<_numState;++from){
 		double normFactor=0.0;
 		for(size_t to=0;to<_numState;++to){
@@ -311,6 +313,7 @@ void HMMmodel::normalizeProb(){
 		}
 	}
 
+    //emission prob
 	for(size_t state=0;state <_numObsType;++state){
 		double normFactor=0.0;
 		for(size_t obs=0;obs<_numObsType;++obs){
@@ -326,24 +329,21 @@ void HMMmodel::normalizeProb(){
 void HMMmodel::viewParam()const{
 	cout << "Alpha" <<endl;
 	for(size_t t=0;t<_alpha.size();++t){
-		for(size_t n=0;n<_numState;++n){
+		for(size_t n=0;n<_numState;++n)
 			cout << _alpha[t][n] << '\t';
-		}
 		cout << endl;
 	}
 	cout << "Beta" <<endl;
 	for(size_t t=0;t<_beta.size();++t){
-		for(size_t n=0;n<_numState;++n){
+		for(size_t n=0;n<_numState;++n)
 			cout << _beta[t][n] << '\t';
-		}
 		cout << endl;
 	}
 	
 	cout << "Gamma" << endl;
 	for(size_t t=0;t<_gamma.size();++t){
-		for(size_t n=0;n<_numState;++n){
+		for(size_t n=0;n<_numState;++n)
 			cout << _gamma[t][n].value << '\t';
-		}
 		cout << endl;
 	}
 
@@ -351,16 +351,15 @@ void HMMmodel::viewParam()const{
 	for(size_t t=0;t<_eps.size();++t){
 		cout << "Time " << t << endl;
 		for(size_t i=0;i<_numState;++i){
-			for(size_t j=0;j<_numState;++j){
+			for(size_t j=0;j<_numState;++j)
 				cout << _eps[t][i][j] << '\t';
-			}
 			cout << endl;
 		}
 		cout << endl;
 	}
 }
-void  HMMmodel::resetParam(size_t obsSeqLen){
- 	for(size_t t=0;t<obsSeqLen;++t){
+void HMMmodel::resetParam(size_t obsSeqLen){
+	for(size_t t=0;t<obsSeqLen;++t){
 		for(size_t state=0;state<_numState;++state){
 			_alpha[t][state] = 0;
 			_beta[t][state] = 0;

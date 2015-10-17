@@ -12,7 +12,7 @@
 
 #include "hmm.h"
 using namespace std;
-#define DEBUG
+//#define DEBUG
 int main(int argc, const char *argv[])
 {
 #ifndef DEBUG
