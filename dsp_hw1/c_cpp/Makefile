@@ -10,6 +10,7 @@ COBJS  = $(addsuffix .o, $(basename $(CSRCS)))
 EXEC = test train
 
 all: $(EXEC)
+	@echo "Finish!"
 
 train: train.o hmm.o
 	@echo "> Building $@"
@@ -24,5 +25,5 @@ test: test.o hmm.o
 	@$(CXX) $(CFLAGS) -c $< -o $@
 
 clean:
-	@$(RM) $(COBJS)   # type make clean to remove the compiled file
-	@$(RM) $(EXEC)
+	$(RM) $(COBJS)
+	$(RM) $(EXEC)

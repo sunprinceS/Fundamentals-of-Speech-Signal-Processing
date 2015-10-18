@@ -19,17 +19,21 @@ using namespace std;
 HMMmodel::HMMmodel(string fileName){
 	loadModel(fileName);
 }
+HMMmodel::HMMmodel(const HMMmodel& rhs){
+	*this = rhs;
+}
 HMMmodel::~HMMmodel(){};
 void HMMmodel::loadModel(string fileName){
+	cout << fileName << endl;
 	ifstream model;
 	model.open(fileName);
 	string line;
- 	while(getline(model,line)){
+	while(getline(model,line)){
+		cout << line << endl;
 		istringstream token(line);
 		string paramType;
 		size_t param;
 		token >> paramType >> param;
-
 		if (paramType =="initial:"){
 			_numState = param;
 			_initProb.resize(_numState);
@@ -77,26 +81,17 @@ void HMMmodel::loadModel(string fileName){
 	}
 	model.close();
 }
-void HMMmodel::train(size_t numIters,string seqsFileName){
-	ifstream trainData;
-	vector<string> obsSeqs;
-	string obsSeq;
-	size_t numTimeFrame=0;
 
-	trainData.open(seqsFileName);
-	while(getline(trainData,obsSeq)){
-		obsSeqs.push_back(obsSeq);
-	}
-	
-	if(obsSeqs.size() !=0){
-		numTimeFrame = obsSeqs[0].length();
-	}
-	else{
-		cerr << "No training data when training...\nleaving";
-		exit(1);
+void HMMmodel::trainInit(size_t numTimeFrame){
+
+	_AccumulateEmisProb.resize(_numObsType);
+	for(size_t i=0;i<_numObsType;++i)
+		_AccumulateEmisProb[i].resize(_numState);
+	for(size_t i=0;i<_numObsType;++i){
+		for(size_t j=0;j<_numState;++j)
+			_AccumulateEmisProb[i][j] = 0;
 	}
 
-	//initial param
 	_alpha.resize(numTimeFrame);
 	for(size_t i=0;i<numTimeFrame;++i)
 		_alpha[i].resize(_numState);
@@ -115,12 +110,36 @@ void HMMmodel::train(size_t numIters,string seqsFileName){
 		for(size_t j=0;j<_numState;++j)
 			_eps[i][j].resize(_numState);
 	}
+}
+
+void HMMmodel::train(size_t numIters,string seqsFileName){
+	ifstream trainData;
+	vector<string> obsSeqs;
+	string obsSeq;
+	size_t numTimeFrame=0;
+
+	trainData.open(seqsFileName);
+	while(getline(trainData,obsSeq)){
+		obsSeqs.push_back(obsSeq);
+	}
 	
+	if(obsSeqs.size() !=0){
+		numTimeFrame = obsSeqs[0].length();
+	}
+	else{
+		cerr << "No training data when training...\nleaving";
+		exit(1);
+	}
+	
+
 	for(size_t iter=0;iter<numIters;++iter){
+		trainInit(numTimeFrame);
 		for(auto it=obsSeqs.begin();it!=obsSeqs.end();++it){
 			BaumWeltch(*it);
+			resetParam(it->length());
 		}
 		update(obsSeqs.size(),numTimeFrame);
+		//viewParam();
 		normalizeProb();
 	}
 
@@ -249,8 +268,23 @@ void HMMmodel::BaumWeltch(const string& obsSeq){
 		}
 	}
 
-	//reset param(alpha and beta)
-	resetParam(obsSeq.length());
+	//collect emis prob.
+	for(size_t state=0;state<_numState;++state){
+		double denominator = 0.0;
+		double numerator[_numObsType];
+
+		for(size_t i=0;i<_numObsType;++i)
+			numerator[i] = 0.0;
+
+		for(size_t time=0;time<obsSeq.length();++time){
+			numerator[_gamma[time][state].obs-'A'] += _gamma[time][state].value;
+			denominator += _gamma[time][state].value;
+		}
+		
+		for(size_t obs=0;obs<_numObsType;++obs){
+			_AccumulateEmisProb[obs][state] += (numerator[obs] / denominator);
+		}
+	}
 }
 void HMMmodel::update(size_t numObsSeqs,size_t numTimeFrame){
 	//new initial prob.
@@ -274,19 +308,9 @@ void HMMmodel::update(size_t numObsSeqs,size_t numTimeFrame){
 	}
 
 	//new emission prob.
-	for(size_t state=0;state<_numState;++state){
-		double denominator = 0.0;
-		double numerator[_numObsType];
-		for(size_t i=0;i<_numObsType;++i)
-			numerator[i] = 0.0;
-
-		for(size_t time=0;time<numTimeFrame;++time){
-			numerator[_gamma[time][state].obs-'A'] += _gamma[time][state].value;
-			denominator += _gamma[time][state].value;
-		}
-		for(size_t obs=0;obs<_numObsType;++obs){
-			_emisProb[obs][state] = (numerator[obs] / denominator);
-		}
+	for(size_t obs=0;obs<_numObsType;++obs){
+		for(size_t state=0;state<_numState;++state)
+			_emisProb[obs][state] = _AccumulateEmisProb[obs][state] / numObsSeqs;
 	}
 }
 
@@ -327,18 +351,6 @@ void HMMmodel::normalizeProb(){
 }
 
 void HMMmodel::viewParam()const{
-	cout << "Alpha" <<endl;
-	for(size_t t=0;t<_alpha.size();++t){
-		for(size_t n=0;n<_numState;++n)
-			cout << _alpha[t][n] << '\t';
-		cout << endl;
-	}
-	cout << "Beta" <<endl;
-	for(size_t t=0;t<_beta.size();++t){
-		for(size_t n=0;n<_numState;++n)
-			cout << _beta[t][n] << '\t';
-		cout << endl;
-	}
 	
 	cout << "Gamma" << endl;
 	for(size_t t=0;t<_gamma.size();++t){

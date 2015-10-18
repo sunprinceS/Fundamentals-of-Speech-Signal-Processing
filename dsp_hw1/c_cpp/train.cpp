@@ -16,7 +16,7 @@ using namespace std;
 int main(int argc, const char *argv[])
 {
 #ifndef DEBUG
-	 if (argc != 5){
+	if  (argc != 5){
 		cerr << "Usage : ./train <#iters> <preTrainedModel> <trainingData> <modelSave>" << endl;
 		exit(1);
 	}
@@ -35,7 +35,7 @@ int main(int argc, const char *argv[])
 	string modelInitFileName(string("../model_init.txt"));
 	string trainingData(string("../seq_model_01.txt"));
 	string saveModel("BBB");
-	
+
 	HMMmodel trainModel(modelInitFileName);
 	trainModel.train(numIters,trainingData);
 	trainModel.writeModel(saveModel);

@@ -37,6 +37,7 @@ class HMMmodel
 {
 public:
 	HMMmodel(string fileName);
+	HMMmodel(const HMMmodel&);
 	~HMMmodel();
 
 	//Basic I/O
@@ -45,6 +46,7 @@ public:
 
 	//Main
 	void train(size_t numIters,string seqsFileName);
+	void trainInit(size_t numTimeFrame);
 	void testInit(size_t numTimeFrame);
 	double viterbi(const string& obsSeq);
 
@@ -56,6 +58,7 @@ private:
 	vector<double> _initProb;
 	vector< vector<double> > _transProb;
 	vector< vector<double> > _emisProb;
+	vector< vector<double> > _AccumulateEmisProb; //used in train stage , for updating
 
 	vector< vector<double> > _alpha;
 	vector< vector<double> > _beta;
