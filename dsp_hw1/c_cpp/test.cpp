@@ -143,6 +143,8 @@ int main(int argc, const char *argv[]) {
 		//loadModel
 		modelNames.open(modelList);
 		while(getline(modelNames,modelName)){
+			//auto model = HMMmodel(modelName);
+			//HMMmodelList.push_back(model);
 			HMMmodelList.push_back(HMMmodel(modelName));
 		}
 		modelNames.close();
@@ -176,7 +178,6 @@ int main(int argc, const char *argv[]) {
 			answerFile.close();
 
 		for(auto it=HMMmodelList.begin();it!=HMMmodelList.end();++it){
-			//cout << it->_numState << endl;
 			it->testInit(numTimeFrame);
 		}
 

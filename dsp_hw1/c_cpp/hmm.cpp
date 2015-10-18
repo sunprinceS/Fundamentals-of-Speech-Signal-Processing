@@ -24,12 +24,10 @@ HMMmodel::HMMmodel(const HMMmodel& rhs){
 }
 HMMmodel::~HMMmodel(){};
 void HMMmodel::loadModel(string fileName){
-	cout << fileName << endl;
 	ifstream model;
-	model.open(fileName);
 	string line;
+	model.open(fileName);
 	while(getline(model,line)){
-		cout << line << endl;
 		istringstream token(line);
 		string paramType;
 		size_t param;
@@ -53,7 +51,7 @@ void HMMmodel::loadModel(string fileName){
 			_transProb.resize(_numState);
 			for(size_t i=0;i<_numState;++i)
 				_transProb[i].resize(_numState);
-			
+
 			for(size_t i=0;i<_numState;++i){
 				getline(model,line);
 				istringstream token(line);
@@ -67,7 +65,7 @@ void HMMmodel::loadModel(string fileName){
 			_emisProb.resize(_numObsType);
 			for(size_t i=0;i<_numObsType;++i)
 				_emisProb[i].resize(_numState);
-			
+
 			for(size_t i=0;i<_numObsType;++i){
 				getline(model,line);
 				istringstream token(line);
@@ -166,7 +164,7 @@ double HMMmodel::viterbi(string const& obsSeq){
 			vector<double> probs;
 			probs.resize(_numState);
 
-			for(size_t fromState;fromState<_numState;++fromState){
+			for(size_t fromState=0;fromState<_numState;++fromState){
 				probs[fromState] = (_delta[time-1][fromState]*_transProb[state][fromState]);
 			}
 			//_delta[time][state].prob = max(probs) * _emisProb[obsSeq[time]-'A'][state];
