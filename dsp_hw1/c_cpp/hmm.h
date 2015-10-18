@@ -37,7 +37,6 @@ class HMMmodel
 {
 public:
 	HMMmodel(string fileName);
-	HMMmodel(const HMMmodel&);
 	~HMMmodel();
 
 	//Basic I/O

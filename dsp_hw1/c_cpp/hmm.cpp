@@ -19,9 +19,6 @@ using namespace std;
 HMMmodel::HMMmodel(string fileName){
 	loadModel(fileName);
 }
-HMMmodel::HMMmodel(const HMMmodel& rhs){
-	*this = rhs;
-}
 HMMmodel::~HMMmodel(){};
 void HMMmodel::loadModel(string fileName){
 	ifstream model;
