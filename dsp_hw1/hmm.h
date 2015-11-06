@@ -58,6 +58,7 @@ private:
 	vector< vector<double> > _transProb;
 	vector< vector<double> > _emisProb;
 	vector< vector<double> > _AccumulateEmisProb; //used in train stage , for updating
+	vector< vector<double> > _AccumulateTransProb; //used in train stage , for updating
 
 	vector< vector<double> > _alpha;
 	vector< vector<double> > _beta;

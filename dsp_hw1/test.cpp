@@ -71,7 +71,7 @@ int main(int argc, const char *argv[]) {
 		if(bAccuracy){
 			//load answer
 			string answer;
-			answerFile.open(string("../testing_answer.txt"));
+			answerFile.open(string("testing_answer.txt"));
 
 			while(getline(answerFile,answer)){
 				for(size_t i=1;i<=HMMmodelList.size();++i){

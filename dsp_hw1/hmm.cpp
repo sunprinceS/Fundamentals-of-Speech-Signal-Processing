@@ -80,11 +80,20 @@ void HMMmodel::loadModel(string fileName){
 void HMMmodel::trainInit(size_t numTimeFrame){
 
 	_AccumulateEmisProb.resize(_numObsType);
-	for(size_t i=0;i<_numObsType;++i)
+	_AccumulateTransProb.resize(_numState);
+	for (size_t i=0;i<_numState;++i) {
+		_AccumulateTransProb[i].resize(_numState);
+	}
+	for(size_t i=0;i<_numObsType;++i){
 		_AccumulateEmisProb[i].resize(_numState);
+	}
 	for(size_t i=0;i<_numObsType;++i){
 		for(size_t j=0;j<_numState;++j)
 			_AccumulateEmisProb[i][j] = 0;
+	}
+	for(size_t i=0;i<_numState;++i){
+		for(size_t j=0;j<_numState;++j)
+			_AccumulateTransProb[i][j] = 0;
 	}
 
 	_alpha.resize(numTimeFrame);
@@ -206,7 +215,7 @@ void HMMmodel::BaumWeltch(const string& obsSeq){
 
 	//base case
 	for(size_t i=0;i<_numState;++i)
-		_alpha[0][i] = _initProb[i];
+		_alpha[0][i] = _initProb[i] * _emisProb[obsSeq[0] - 'A'][i];
 	//recursive case
  	for(size_t timeFrame=1;timeFrame<obsSeq.length();++timeFrame){
 		for(size_t desState=0;desState<_numState;++desState){
@@ -280,6 +289,20 @@ void HMMmodel::BaumWeltch(const string& obsSeq){
 			_AccumulateEmisProb[obs][state] += (numerator[obs] / denominator);
 		}
 	}
+	//collect trans prob.
+	for(size_t from= 0;from<_numState;++from){
+		double denominator = 0.0;
+		for(size_t timeFrame=0;timeFrame<obsSeq.length()-1;++timeFrame){
+			denominator += _gamma[timeFrame][from].value;
+		}
+		for(size_t to=0;to<_numState;++to){
+			double numerator = 0.0;
+			for(size_t timeFrame=0;timeFrame<obsSeq.length()-1;++timeFrame){
+				numerator += _eps[timeFrame][to][from];
+			}
+			_AccumulateTransProb[to][from] += (numerator / denominator);
+		}
+	}
 }
 void HMMmodel::update(size_t numObsSeqs,size_t numTimeFrame){
 	//new initial prob.
@@ -288,18 +311,9 @@ void HMMmodel::update(size_t numObsSeqs,size_t numTimeFrame){
 	}
 
 	//new transition prob.
-	for(size_t from= 0;from<_numState;++from){
-		double denominator = 0.0;
-		for(size_t timeFrame=0;timeFrame<numTimeFrame-1;++timeFrame){
-			denominator += _gamma[timeFrame][from].value;
-		}
-		for(size_t to=0;to<_numState;++to){
-			double numerator = 0.0;
-			for(size_t timeFrame=0;timeFrame<numTimeFrame-1;++timeFrame){
-				numerator += _eps[timeFrame][to][from];
-			}
-			_transProb[to][from] = (numerator / denominator);
-		}
+	for(size_t to=0;to<_numState;++to){
+		for(size_t from=0;from<_numState;++from)
+			_transProb[to][from] = _AccumulateTransProb[to][from] / numObsSeqs;
 	}
 
 	//new emission prob.
