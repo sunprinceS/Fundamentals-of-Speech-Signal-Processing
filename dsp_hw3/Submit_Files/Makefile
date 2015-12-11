@@ -3,37 +3,73 @@
 SRIPATH = /home/sunprinces/srilm-1.7.1
 MACHINE_TYPE = i686-m64
 LM = bigram.lm
+SRIBIN=$(SRIPATH)/bin/$(MACHINE_TYPE)
 
 CXX = g++
-CXXFLAGS = -O3 -I$(SRIPATH)/include -w
+CXXFLAGS = -g -std=c++11 -I$(SRIPATH)/include -w
+#CXXFLAGS = -O3 -std=c++11 -I$(SRIPATH)/include -w
 vpath lib%.a $(SRIPATH)/lib/$(MACHINE_TYPE)
 
-TARGET = mydisambig
-SRC = mydisambig.cpp
-OBJ = $(SRC:.cpp=.o)
+EXEC= mydisambig
+CSRCS=$(wildcard *.cpp)
+COBJS  = $(addsuffix .o, $(basename $(CSRCS)))
+CNT = $(wildcard *.cnt)
+SEG = $(wildcard testdata/*.seg *_seg.txt)
+LM_FILE = $(wildcard *.lm)
+
 TO = ZhuYin-Big5.map
 FROM = Big5-ZhuYin.map
-.PHONY: all clean map run
+.PHONY: all clean map
 
-all: $(TARGET)
+all: $(EXEC)
+	@echo "Finish!"
 
-$(TARGET): $(OBJ) -loolm -ldstruct -lmisc
-	$(CXX) $(LDFLAGS) -o $@ $^
+mydisambig : $(COBJS) -loolm -ldstruct -lmisc
+	@echo "> Building $@"
+	$(CXX) $(LDFLAGS) $^ -o $@
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $<
-run:
-	@#TODO How to run your code toward different txt?
+	@echo "> Compiling $<"
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+preprocess: corpus.txt separator_big5.pl
+	@echo "Preprocessing..."
+	@echo "================"
+	@echo "<1> seperate corpus"
+	perl separator_big5.pl corpus.txt > corpus_seg.txt
+	@echo "Done!"
+	@echo "<2> Building Bi-gram"
+	$(SRIBIN)/ngram-count -text corpus_seg.txt -write lm2.cnt -order 2
+	$(SRIBIN)/ngram-count -read lm2.cnt -lm bigram.lm -unk -order 2
+	@echo "Done!"
+	@echo "<3> Building Tri-gram"
+	$(SRIBIN)/ngram-count -text corpus_seg.txt -write lm3.cnt -order 3
+	$(SRIBIN)/ngram-count -read lm3.cnt -lm trigram.lm -unk -order 3
+	@echo "Done!"
+	@echo "<4> Segment testdata"
 	@for i in $(shell seq 1 10) ; do \
-		echo "Running $$i.txt"; \
-		./mydisambig -text testdata/$$i.txt -map $(TO) -lm $(LM) -order 2 > result2/$$i.txt; \
+		perl separator_big5.pl testdata/$$i.txt > testdata/$$i.seg ; \
 	done;
-map:
+	@echo "Preprocess finish!"
+	@echo "================"
+	
+
+srilm_dis: bigram.lm trigram.lm corpus_seg.txt $(TO)
+	@for i in $(shell seq 1 10) ; do \
+		echo "Running $$i.seg"; \
+		$(SRIBIN)/disambig -text testdata/$$i.seg -map $(TO) -lm $(LM) -order 2 > result1/$$i.txt; \
+	done;
+
+test: separator_big5.pl
+	@perl separator_big5.pl testdata/example.txt > testdata/example.seg
+	$(SRIBIN)/disambig -text testdata/example.seg -map $(TO) -lm $(LM) -order 2 > result1/example.txt
+map: $(FROM)
 	@echo "Mapping!"
 	iconv -f BIG5 -t UTF-8 $(FROM) -o $(FROM)_utf8
 	@python2 mapping.py $(FROM)_utf8 $(TO)_utf8
 	iconv -f UTF-8 -t BIG5 $(TO)_utf8 -o $(TO)
-	@$(RM) $(FROM)_utf8 $(TO)_utf8 
-clean:
-	$(RM) $(OBJ) $(TARGET)
+	@$(RM) $(FROM)_utf8 $(TO)_utf8
 
+clean:
+	$(RM) $(COBJS) $(EXEC)
+	$(RM) $(LM_FILE) $(CNT) $(SEG)
