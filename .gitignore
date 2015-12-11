@@ -1,2 +1,7 @@
 *.ppt
 *.pdf
+*.o
+*.lm
+*.cnt
+*.map
+*.txt
