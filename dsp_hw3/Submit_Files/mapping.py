@@ -25,9 +25,9 @@ for line in from_map:
             to_map[spell[:3]].extend(word)
 
 for key in to_map:
-    to_file.write('{}\t'.format(key))
+    to_file.write('{}'.format(key))
     for idx in range(0,len(to_map[key]),3):
-        to_file.write('{} '.format(''.join(to_map[key][idx:idx+3])))
+        to_file.write(' {}'.format(''.join(to_map[key][idx:idx+3])))
     to_file.write('\n')
 
 from_file.close()

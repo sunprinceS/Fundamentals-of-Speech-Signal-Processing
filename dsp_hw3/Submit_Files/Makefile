@@ -1,13 +1,13 @@
 # The following two variable will be commandline determined by TA
 # For testing, you could uncomment them.
-SRIPATH = /home/sunprinces/srilm-1.7.1
-MACHINE_TYPE = i686-m64
-LM = bigram.lm
+SRIPATH ?= /home/sunprinces/srilm-1.5.10
+MACHINE_TYPE ?= i686-m64
+LM ?= bigram.lm
 SRIBIN=$(SRIPATH)/bin/$(MACHINE_TYPE)
 
 CXX = g++
-CXXFLAGS = -g -std=c++11 -I$(SRIPATH)/include -w
-#CXXFLAGS = -O3 -std=c++11 -I$(SRIPATH)/include -w
+#CXXFLAGS = -g -std=c++11 -I$(SRIPATH)/include
+CXXFLAGS = -g -std=c++11 -I$(SRIPATH)/include
 vpath lib%.a $(SRIPATH)/lib/$(MACHINE_TYPE)
 
 EXEC= mydisambig
@@ -19,7 +19,7 @@ LM_FILE = $(wildcard *.lm)
 
 TO = ZhuYin-Big5.map
 FROM = Big5-ZhuYin.map
-.PHONY: all clean map
+.PHONY: all clean map cleanAll
 
 all: $(EXEC)
 	@echo "Finish!"
@@ -71,5 +71,7 @@ map: $(FROM)
 	@$(RM) $(FROM)_utf8 $(TO)_utf8
 
 clean:
+	$(RM) $(COBJS) $(EXEC)
+cleanAll:
 	$(RM) $(COBJS) $(EXEC)
 	$(RM) $(LM_FILE) $(CNT) $(SEG)
