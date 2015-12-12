@@ -1,17 +1,13 @@
-#include <iostream>
-#include <fstream>
-#include <algorithm>
-#include <vector>
-#include <string>
-#include <map>
 #include <cstdlib>
+#include <locale>
 #include "DisambigModel.h"
 
 using namespace std;
-#define DEBUG
+//#define DEBUG
 
 int main(int argc, const char *argv[])
 {
+	setlocale(LC_ALL,"zh_TW.BIG5"); // WTF big5...= ="
 #ifdef DEBUG
 	string segFile("testdata/1.seg");
 	string mapFile("ZhuYin-Big5.map");

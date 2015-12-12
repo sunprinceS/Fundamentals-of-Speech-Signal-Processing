@@ -7,7 +7,7 @@ SRIBIN=$(SRIPATH)/bin/$(MACHINE_TYPE)
 
 CXX = g++
 #CXXFLAGS = -g -std=c++11 -I$(SRIPATH)/include
-CXXFLAGS = -g -std=c++11 -I$(SRIPATH)/include
+CXXFLAGS = -O3 -std=c++11 -I$(SRIPATH)/include -w
 vpath lib%.a $(SRIPATH)/lib/$(MACHINE_TYPE)
 
 EXEC= mydisambig
@@ -19,7 +19,7 @@ LM_FILE = $(wildcard *.lm)
 
 TO = ZhuYin-Big5.map
 FROM = Big5-ZhuYin.map
-.PHONY: all clean map cleanAll
+.PHONY: all clean map cleanAll run srilm
 
 all: $(EXEC)
 	@echo "Finish!"
@@ -54,15 +54,17 @@ preprocess: corpus.txt separator_big5.pl
 	@echo "================"
 	
 
+run: bigram.lm trigram.lm corpus_seg.txt $(TO) $(EXEC)
+	@for i in $(shell seq 1 10) ; do \
+		echo "Running $$i.seg"; \
+		./mydisambig testdata/$$i.seg $(TO) $(LM) 2 > result2/$$i.txt; \
+	done;
 srilm_dis: bigram.lm trigram.lm corpus_seg.txt $(TO)
 	@for i in $(shell seq 1 10) ; do \
 		echo "Running $$i.seg"; \
 		$(SRIBIN)/disambig -text testdata/$$i.seg -map $(TO) -lm $(LM) -order 2 > result1/$$i.txt; \
 	done;
 
-test: separator_big5.pl
-	@perl separator_big5.pl testdata/example.txt > testdata/example.seg
-	$(SRIBIN)/disambig -text testdata/example.seg -map $(TO) -lm $(LM) -order 2 > result1/example.txt
 map: $(FROM)
 	@echo "Mapping!"
 	iconv -f BIG5 -t UTF-8 $(FROM) -o $(FROM)_utf8

@@ -1,13 +1,18 @@
 #include "DisambigModel.h"
-//#include "util.h"
+
 using namespace std;
+
+Big5 toBig5(unsigned char p1,unsigned char p2){
+	return (((unsigned short)p1 << 8 | (unsigned short)p2));
+}
 
 void showBig5(Big5 word,char sep){
 	char str[3] = {0};
-	str[0] = (char)(word >> 8);
-	str[1] = (char)(word & 0xFF);
+	str[0] = (unsigned char)(word >> 8);
+	str[1] = (unsigned char)(word & 0xFF);
 	cout << (const char*)str << sep;
 }
+
 LogP DisambigModel::getBigramProb(VocabIndex wid1, VocabIndex wid2)
 {
     if(wid1 == Vocab_None)  //OOV
@@ -18,15 +23,14 @@ LogP DisambigModel::getBigramProb(VocabIndex wid1, VocabIndex wid2)
     VocabIndex context[] = { wid1, Vocab_None };
     return _lm->wordProb( wid2, context);
 }
-Big5 toBig5(uint8_t p1,uint8_t p2){
-	return (((uint16_t)p1 << 8 | (uint16_t)p2));
-}
+
 VocabIndex DisambigModel::Big5toIndex(Big5 word){
 	char str[3] = {0};
-	str[0] = (char)(word >> 8);
-	str[1] = (char)(word & 0xFF);
+	str[0] = (unsigned char)(word >> 8);
+	str[1] = (unsigned char)(word & 0xFF);
 	return _voc.getIndex(str);
 }
+
 vector<Big5> DisambigModel::viterbi(vector<Big5> seg){
 	vector< vector<Delta> > deltas(seg.size());
 	vector<Big5> possibleWords = _ZhuYinMap[seg[0]];
@@ -64,7 +68,6 @@ vector<Big5> DisambigModel::viterbi(vector<Big5> seg){
 			}
 			//won't consider emission except first word
 			delta[j].prob = *(max_element(probs.begin(),probs.end()));
-			//cout << delta[j].prob << endl;
 			delta[j].word = possibleWords[j];
 			delta[j].prevWordPtr = &(deltas[i-1][distance(probs.begin(),max_element(probs.begin(),probs.end()))]);
 		}
@@ -79,7 +82,6 @@ vector<Big5> DisambigModel::viterbi(vector<Big5> seg){
 	}
 	return segAns;
 }
-
 
 void DisambigModel::loadMap(string mapFile){
 	ifstream zhuyinMap;
@@ -103,13 +105,16 @@ void DisambigModel::loadMap(string mapFile){
 		_ZhuYinMap[key] = value;
 		}
 	}
+	zhuyinMap.close();
 }
+
 void DisambigModel::loadLM(string lmfile){
 	_lm = new Ngram(_voc,_numOrder);
 	File lmFile(lmfile.c_str(),"r");
 	_lm->read(lmFile);
 	lmFile.close();
 }
+
 void DisambigModel::loadSeg(string segFile){
 	ifstream seg;
 	string line;
@@ -133,13 +138,14 @@ void DisambigModel::loadSeg(string segFile){
 	}
 	seg.close();
 }
+
 void DisambigModel::writeAns(){
 	for(size_t i=0;i<_sentences.size();++i){
 		writeSentence(viterbi(_sentences[i]));
 	}
 }
 void DisambigModel::writeSentence(vector<Big5> ans){
-	cout << Vocab_SentStart;
+	cout << Vocab_SentStart << ' ';
 	for(size_t i=0;i<ans.size();++i){
 		showBig5(ans[i],' ');
 	}

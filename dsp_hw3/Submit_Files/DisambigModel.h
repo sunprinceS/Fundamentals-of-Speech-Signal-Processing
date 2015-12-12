@@ -1,25 +1,24 @@
 #include <iostream>
 #include <fstream>
-#include <locale>
-#include <cstdio>
 #include <string>
 #include <vector>
 #include <map>
 #include <algorithm>
-#include <cstdint>
-#include <cctype>
+#include <cstdio>
 #include <limits>
+#include <cctype>
 #include "Ngram.h"
 
 using namespace std;
+
 const LogP NEG_INF = numeric_limits<float>::infinity() * (-1);
-typedef uint16_t Big5;
+
+typedef unsigned short Big5;
 
 class DisambigModel
 {
 public:
 	DisambigModel(string mapFile,string lmFile, unsigned int numOrder){
-		setlocale(LC_ALL,"zh_TW.BIG5"); // WTF big5...= ="
 		loadMap(mapFile);
 		_numOrder = numOrder;
 		loadLM(lmFile);
@@ -42,17 +41,18 @@ public:
 
 private:
 	vector< vector<Big5> > _sentences;
-	VocabIndex Big5toIndex(Big5 word);
-	//vector<Big5> _lm;
-	unsigned int _numOrder;
 	map<Big5, vector<Big5> > _ZhuYinMap;
-
+	unsigned int _numOrder;
+	
 	Vocab _voc;
 	Ngram* _lm;
 
-	LogP getBigramProb(VocabIndex wid1,VocabIndex wid2);
 	// I/O
 	void writeSentence(vector<Big5>);
+
+	//util
+	VocabIndex Big5toIndex(Big5 word);
+	LogP getBigramProb(VocabIndex wid1,VocabIndex wid2);
 
 };
 
