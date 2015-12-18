@@ -54,18 +54,18 @@ preprocess: corpus.txt separator_big5.pl
 	@echo "================"
 	
 
-run: bigram.lm trigram.lm corpus_seg.txt $(TO) $(EXEC)
+run: bigram.lm trigram.lm corpus_seg.txt testdata/ $(TO) $(EXEC)
 	@for i in $(shell seq 1 10) ; do \
-		echo "Running $$i.seg"; \
-		./mydisambig testdata/$$i.seg $(TO) $(LM) 2 > result2/$$i.txt; \
+		echo "Running $$i.txt"; \
+		./mydisambig testdata/$$i.txt $(TO) $(LM) 2 > result2/$$i.txt; \
 	done;
 srilm_dis: bigram.lm trigram.lm corpus_seg.txt $(TO)
 	@for i in $(shell seq 1 10) ; do \
 		echo "Running $$i.seg"; \
-		$(SRIBIN)/disambig -text testdata/$$i.seg -map $(TO) -lm $(LM) -order 2 > result1/$$i.txt; \
+		$(SRIBIN)/disambig -text testdata/$$i.txt -map $(TO) -lm $(LM) -order 3 > result1/$$i.txt; \
 	done;
 
-map: $(FROM) mapping
+map: $(FROM)
 	@echo "Mapping!"
 	@python2 mapping.py $(FROM) $(TO)
 
