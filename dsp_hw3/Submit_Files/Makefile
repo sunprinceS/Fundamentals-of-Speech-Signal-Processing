@@ -65,15 +65,12 @@ srilm_dis: bigram.lm trigram.lm corpus_seg.txt $(TO)
 		$(SRIBIN)/disambig -text testdata/$$i.seg -map $(TO) -lm $(LM) -order 2 > result1/$$i.txt; \
 	done;
 
-map: $(FROM)
+map: $(FROM) mapping
 	@echo "Mapping!"
-	iconv -f BIG5 -t UTF-8 $(FROM) -o $(FROM)_utf8
-	@python2 mapping.py $(FROM)_utf8 $(TO)_utf8
-	iconv -f UTF-8 -t BIG5 $(TO)_utf8 -o $(TO)
-	@$(RM) $(FROM)_utf8 $(TO)_utf8
+	@python2 mapping.py $(FROM) $(TO)
 
 clean:
 	$(RM) $(COBJS) $(EXEC)
 cleanAll:
 	$(RM) $(COBJS) $(EXEC)
-	$(RM) $(LM_FILE) $(CNT) $(SEG)
+	$(RM) $(LM_FILE) $(CNT) $(SEG) $(TO)
