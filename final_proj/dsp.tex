@@ -1,0 +1,190 @@
+
+\documentclass{article}
+%\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[left=2.5cm, right=2.5cm, top=1.cm, bottom=3.5cm]{geometry}
+\title{Introduction to Digital Speech Processing\\
+Final Project} %標題
+\author{電機三~徐瑞陽~B02901085 \\
+電機三~藍崧文~B02901047} %作者
+\date{2016.1.17} %日期
+\usepackage{xeCJK}
+\usepackage{fontspec}
+\usepackage[square,numbers]{natbib}
+\bibliographystyle{abbrvnat}
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage{spreadtab}
+\usepackage{tikz}
+\setCJKmainfont{DFFN_R3.TTC}
+
+\begin{document}
+\maketitle
+\section{Introduction}
+		\par~~~~Nowadays, Vector Space Model, an algebraic model for representing text documents as real-valued vectors, plays an important role in text mining area such as information retrieval, question answering...etc. The most well-known example is word vector\cite{NIPS2013_5021}, which catchs the semantic meaning of word and their logic relationship by projecting the 1-of-N vector space to distributed word embedding space through neural network(using skip-gram or CBOW).
+\newline
+
+	\par After the success of embedding in word level, we may want to embed the higher level in text, say, sentence level or even document level, which contain more information than word. However, when it comes to higher level, things become more complicated, we have to consider the cause and effect in sentence, higher probability of OOV...etc. A possible way is to use existent word embedding with some composite method to represent. In this semester, we've studied treeLSTM, a supervised method to exploit the semantic tree structure to compose glove vectors to catch the sentiment behind sentence accurately.
+\newline
+
+	\par However, the fact is that we don't have much well-labeled data in real world! Therefore, we need to come up with some "unsupervised" method to embed the sentence to real-valued vector for general purpose rather than specific domain. There are some existent model such as Hierarchical Autoencoder\cite{li2015hierarchical} which uses LSTM, Paragraph Vector\cite{DBLP:journals/corr/LeM14} and the model we studied in this project -- Skip Thought Vector\cite{kiros2015skip}...etc.
+\newline
+
+	\par 打一些關於visual-sentence embedding的簡介
+\newline
+
+	\par Finally, we compose these two models to an interesting application -- Neural Storyteller, telling a fascinating story about given image.
+
+
+\section{Skip-Thought Vector}
+~~~~\par After studying some so-called "unsupervised" methods to embed sentence, We found the similarity of these methods is that they all exploit the inherent "order" among sentences in a corpus. 
+	\newline
+
+	\par The skip-thought vector is a framework of encoder-decoder model. That is, an encoder will embed sentence into real-valued vector and a decoder will use these real-valued vectors to generate surrounding sentences. Besides, why this model is been called "skip-thought" is because it uses skip-gram in sentence level(using middle sentence to generate previous and next sentence).
+	\newline
+
+	\par By \cite{kiros2015skip} , given sentence tuple($s_{i-1},s_i,s_{i+1}$). Let $w_{i}^{t}$ be the t-th word in $s_i$ , and $\vec{x}_{i}^{\ t}$ be its embedding(by word2vec...etc)
+
+\subsection{Encoder}
+	There are some encoder-decoder models such as LSTM-LSTM, RNN-RNN...etc to choose. In skip-thought\cite{kiros2015skip}, it uses RNN-RNN with GRU\cite{chung2015gated}(simplified LSTM). It views the hidden state vector of last word $\vec{h}_{i}^{T}$ as the sentence embedding vector(abstractly speaking, it contains whole information in a sentence). At each timestep, we iterate following equqtion:
+	\[\vec{r}^{\ t} = \sigma(W_r\vec{x}^{\ t} + U_r\vec{h}^{t-1})\]
+	\[\vec{z}^{\ t} = \sigma(W_z\vec{x}^{\ t} + U_z\vec{h}^{t-1})\]
+	\[\vec{h'}^t = \text{tanh}(W\vec{x}^{\ t} + U(\vec{r}\odot \vec{h}^{t-1})\]
+	\[\vec{h}^t = (1-\vec{z}^{\ t}) \odot \vec{h}^{t-1} + \vec{z}^{\ t} \odot \vec{h'}^t \]
+	$\vec{z}^{\ t}$ is the update gate, and $\vec{r}^{\ t}$ is the reset gate. The graphical operation is as follows:
+	\begin{figure}[H]
+	\begin{center}
+		\includegraphics[scale=0.2]{gru.jpg}
+		\caption{GRU framework\cite{grufig}}
+	\end{center}
+\end{figure}
+
+\subsection{Decoder}
+	The computation of decoding is pretty like encoding, so we omit its equations here. The only difference of them is that decoding have another three bias matrices when calculating $\vec{r}^{\ t},\vec{z}^{\ t},\vec{h'}^{t}$. There are two decoders in skip-thought, one is for generating previous sentence, and the other is for generating next sentence. Besides, a vocabulary matrix $V \in M_{n \times k}$($k$ is the dimension of hidden state, $n$ is the number of vocabulary) is used to connect decoder's hidden state and the distribution of words.
+
+	\[P(w_{i+1}^t | w_{i+1}^{<t},\vec{h}_i) = \alpha \cdot exp(\vec{v}_{w_{i+1}^t}\vec{h}_{i+1}^{t})\]
+
+where $\vec{v}_{w_{i+1}^t}$ denotes the row of $V$ corresponding to $w_{i+1}^t$, and so forth.
+\newline
+
+This paper didn't talk about how to build $V$(and the code is directly load it from external file). In our opinion, the vocabulary matrix $V$ is pre-built base on the corpus in the beginning. Besides, we think we can combime it with attention-based model during training. Because base on different words in sentence , the distribution, or say, importance of words should change.
+
+\subsection{Objective}
+\par ~~~~During training, we want to maximize this skip-gram-like objective function which defined as follow
+	\[\sum\limits_{t} logP(w_{i+1}^t | w_{i+1}^{<t},\vec{h}_i) + \sum\limits_{t} logP(w_{i-1}^t | w_{i-1}^{<t},\vec{h}_i)\]
+
+\subsection{Vocabulary Expansion}
+\subsection{Applicaion}
+	\par~~~~
+
+
+
+\section{Image-Sentence Embedding}
+ 
+    ~~~~To know how to convert images to sentences, we study the paper “Unifying Visual-Semantic Embeddings with Multimodal Neural Language Models”, learning the concepts of multimodal and encoder-decode.
+
+	The ideas of encoder-decoder methods comes from neural machine translation (NMT). NMT is an end-to-end translation system which is based on the encoder-decoder principle. A encoder is for mapping sentences in one kind of languages to distributed vectors( The space where the vectors are will be called multimodal space in author’s modal in latter paragraph), while a decoder map these vectors to sentences in another language. The author takes this “translation” idea to solve the image-sentence embedding problems as translation problem.
+	
+	The encoder-decoder model is composed of CNN for encoder, structure-content neural language models (SC-NLM) for decoder. The SC-NLM is based on multiplicative neural language models, the spirit of which is that dealing with both image vectors and word vectors in multimodal space. That is, map both kind vectors to multimodal space and then multiple them component-wise to get the output vector. Then map the vector back in word space, using sigmoid method to obtain the probability distribution of next word. Instead of using image vectors directly, SC-NLM use an additive function of image vectors and structure vectors computed by structure variables.
+	The core concept of the embedding, is to map different vector to multimodal space. This is the way that how we can compute vectors from different sources. In the paper, it also mentioned the concept of alignment of translation, but didn’t practice it. So we study the next paper, ”Show, Attend and Tell: Neural Image Caption Generation with Visual Attention”.
+	
+	This paper introduces concept “attend”, which is the idea of alignment in image capture. When outputs next word, model will choose its sight on the picture to decide which part of image “translated”. The author use a multilayer perceptron to construct an attention model fatt, conditioned on the previous hidden state, to decide value of each location of image and get the weights by sigmoid. Then using attention of “hard” (sight on the location of highest weight) or “soft” (weighted sight) to get the current capture of image.
+ 	
+\section{Application: Neural Story Teller}
+			\par ~~~~Now, we have a skip-thought vector space $R_{SK}$ with encoder $F_{enc,SK}$ and decoder $F_{dec,SK}$, an image-sentence vector space $R_{IS}$ with embedding function $F_{IS}$, and style-shifhting function $F_S$ to change style in $R_{SK}$
+
+	\[ F_{enc,SK} : \textit{Text} \to R_{SK}\]
+	\[ F_{dec,SK} : R_{SK} \to \textit{Text}\]
+	\[ F_{IS} : \textit{Image} \to R_{IS}\]
+	\[ F_S : R_{SK} \to R_{SK}\]
+	\newline
+
+	\par Given a new image $\vec{x}_{image}$, The basic flow is as follow:
+	\begin{enumerate}
+		\item Map $\vec{x}_{image}$ to $R_{IS}$ by $F_{IS}(\vec{x}_{image}) = \vec{x}_{IS,embed}$
+		\item compute cosine similarity between $\vec{x}_{IS,embed}$ and image-sentence vectors of trained captions $\vec{c}_1 \sim \vec{c}_K$, and choose top $N$ captions' vectors
+		\item Map these capions by Skip thought encoder $F_{enc,SK}(\vec{c}_i) = \vec{c}_{i,embed}$
+		\item Average these $\vec{c}_{i,embed}$ , then we'll get $\vec{x}_{SK,embed}$, the skip-thought vector of image $\vec{x}_{image}$
+		\item Map $\vec{x}_{SK,embed}$ , a caption-syle vector to $\vec{y}_{SK,embed}$ , a corpus-style vector
+	\end{enumerate}
+
+	\par Let $\vec{c}$ be the average vector of captions in $R_{SK}$ , $\vec{b}$ be the average vector of all vectors in $R_{SK}$. Abstractly speaking, we can view $\vec{c}$ and $\vec{b}$ as the corpus-level background vectors, or say, "style". Therefore, a naive method for style shifting is
+	\[ F_S(\vec{x}) = \vec{x} - \vec{c} + \vec{b} \]
+
+
+
+
+
+\section{Experiment Result}
+
+5
+
+NEAREST-CAPTIONS:
+A group of people standing around each other next to a woman in a wedding dress .
+A woman standing next to a man while wearing a short dress .
+A photographer taking a picture of a man and a woman in a wedding dress .
+A man and woman near a girl in a dress .
+a male and female and she is in a wedding dress .
+
+OUTPUT:
+You woman
+oh my God
+I think you 're going to be married in a couple of times
+and now
+woman who can t deny it
+I looked after 
+
+6
+
+NEAREST-CAPTIONS:
+a woman in a brown dress in a park flying a kite
+there is a young girl wearing a dress flying a kite
+Two young girls standing together in a park .
+Two ladies looking at pictures on a camera in the park .
+A girl in a dress is standing in the woods holding a suitcase
+
+OUTPUT:
+I give you a girl
+I do n't know how she 's going to marry me
+and
+in the last moment
+I swear
+I love you a girl
+
+7
+
+NEAREST-CAPTIONS:
+A little girl is playing outdoors neat a tree .
+A little girl walking across a wooden bridge .
+A girl standing in front of a river .
+A woman standing near a fence with several children gathered around her .
+A woman holding a child next to a wooden fence .
+
+:
+I give you girl
+I 'm going to be a little girl
+and when she says
+I know there are no children in the past
+right now
+I thought you could forgive me
+
+\section{Conclusion \& Thoughts}
+打一些心得
+
+\section{Basic Information}
+\begin{itemize}
+    \item 徐瑞陽 : Skip-Thought Vector and Neural storyteller Study , modify some neural-storyteller code
+    \item 藍崧文 : 
+\end{itemize}
+\medskip
+
+
+\bibliography{myref}
+
+
+\end{document}
