@@ -1,4 +1,3 @@
-
 \documentclass{article}
 %\usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
@@ -29,7 +28,7 @@ Final Project} %標題
 		\par~~~~Nowadays, Vector Space Model, an algebraic model for representing text documents as real-valued vectors, plays an important role in text mining area such as information retrieval, question answering...etc. The most well-known example is word vector\cite{NIPS2013_5021}, which catchs the semantic meaning of word and their logic relationship by projecting the 1-of-N vector space to distributed word embedding space through neural network(using skip-gram or CBOW).
 \newline
 
-	\par After the success of embedding in word level, we may want to embed the higher level in text, say, sentence level or even document level, which contain more information than word. However, when it comes to higher level, things become more complicated, we have to consider the cause and effect in sentence, higher probability of OOV...etc. A possible way is to use existent word embedding with some composite method to represent. In this semester, we've studied treeLSTM, a supervised method to exploit the semantic tree structure to compose glove vectors to catch the sentiment behind sentence accurately.
+	\par After the success of embedding in word level, we may want to embed the higher level in text, say, sentence level or even document level, which contain more information than word. However, when it comes to higher level, things become more complicated, we have to consider the cause and effect in sentence, higher probability of OOV...etc. A possible way is to use existent word embedding with some composite method to represent, but the question is what the composite opeator looks like. In this semester, we've studied treeLSTM, a supervised method to exploit the semantic tree structure to compose glove vectors to catch the sentiment behind sentence accurately.
 \newline
 
 	\par However, the fact is that we don't have much well-labeled data in real world! Therefore, we need to come up with some "unsupervised" method to embed the sentence to real-valued vector for general purpose rather than specific domain. There are some existent model such as Hierarchical Autoencoder\cite{li2015hierarchical} which uses LSTM, Paragraph Vector\cite{DBLP:journals/corr/LeM14} and the model we studied in this project -- Skip Thought Vector\cite{kiros2015skip}...etc.
@@ -51,12 +50,14 @@ Final Project} %標題
 	\par By \cite{kiros2015skip} , given sentence tuple($s_{i-1},s_i,s_{i+1}$). Let $w_{i}^{t}$ be the t-th word in $s_i$ , and $\vec{x}_{i}^{\ t}$ be its embedding(by word2vec...etc)
 
 \subsection{Encoder}
-	There are some encoder-decoder models such as LSTM-LSTM, RNN-RNN...etc to choose. In skip-thought\cite{kiros2015skip}, it uses RNN-RNN with GRU\cite{chung2015gated}(simplified LSTM). It views the hidden state vector of last word $\vec{h}_{i}^{T}$ as the sentence embedding vector(abstractly speaking, it contains whole information in a sentence). At each timestep, we iterate following equqtion:
-	\[\vec{r}^{\ t} = \sigma(W_r\vec{x}^{\ t} + U_r\vec{h}^{t-1})\]
-	\[\vec{z}^{\ t} = \sigma(W_z\vec{x}^{\ t} + U_z\vec{h}^{t-1})\]
-	\[\vec{h'}^t = \text{tanh}(W\vec{x}^{\ t} + U(\vec{r}\odot \vec{h}^{t-1})\]
-	\[\vec{h}^t = (1-\vec{z}^{\ t}) \odot \vec{h}^{t-1} + \vec{z}^{\ t} \odot \vec{h'}^t \]
-	$\vec{z}^{\ t}$ is the update gate, and $\vec{r}^{\ t}$ is the reset gate. The graphical operation is as follows:
+\par~~~~There are some encoder-decoder models such as LSTM-LSTM, RNN-RNN...etc to choose. In skip-thought\cite{kiros2015skip}, it uses RNN-RNN with GRU\cite{chung2015gated}(enhanced RNN). It views the hidden state vector of last word $\vec{h}_{i}^{T}$ as the sentence embedding vector(abstractly speaking, it contains whole information in a sentence). At each timestep, we iterate following equations:
+	\begin{align}
+	\vec{r}^{\ t} = \sigma(W_r\vec{x}^{\ t} + U_r\vec{h}^{t-1}) \\
+	\vec{z}^{\ t} = \sigma(W_z\vec{x}^{\ t} + U_z\vec{h}^{t-1}) \\
+	\vec{h'}^t = \text{tanh}(W\vec{x}^{\ t} + U(\vec{r}\odot \vec{h}^{t-1}) \\
+	\vec{h}^t = (1-\vec{z}^{\ t}) \odot \vec{h}^{t-1} + \vec{z}^{\ t} \odot \vec{h'}^t
+	\end{align}
+	$\vec{z}^{\ t}$ is the update gate, and $\vec{r}^{\ t}$ is the reset gate. The graphical operation flow is as follows:
 	\begin{figure}[H]
 	\begin{center}
 		\includegraphics[scale=0.2]{gru.jpg}
@@ -65,22 +66,33 @@ Final Project} %標題
 \end{figure}
 
 \subsection{Decoder}
-	The computation of decoding is pretty like encoding, so we omit its equations here. The only difference of them is that decoding have another three bias matrices when calculating $\vec{r}^{\ t},\vec{z}^{\ t},\vec{h'}^{t}$. There are two decoders in skip-thought, one is for generating previous sentence, and the other is for generating next sentence. Besides, a vocabulary matrix $V \in M_{n \times k}$($k$ is the dimension of hidden state, $n$ is the number of vocabulary) is used to connect decoder's hidden state and the distribution of words.
-
-	\[P(w_{i+1}^t | w_{i+1}^{<t},\vec{h}_i) = \alpha \cdot exp(\vec{v}_{w_{i+1}^t}\vec{h}_{i+1}^{t})\]
-
+\par~~~~The computation of decoding is pretty like encoding, so we omit its equations here. The only difference of them is that decoding have another three bias matrices when calculating $\vec{r}^{\ t},\vec{z}^{\ t},\vec{h'}^{t}$. There are two decoders in skip-thought, one is for generating previous sentence, and the other is for generating next sentence. Besides, a vocabulary matrix $V \in M_{n \times k}$($k$ is the dimension of hidden state, $n$ is the number of vocabulary) is used to connect decoder's hidden state and the distribution of words.
+	\begin{align}
+	P(w_{i+1}^t | w_{i+1}^{<t},\vec{h}_i) = \alpha \cdot exp(\vec{v}_{w_{i+1}^t}\vec{h}_{i+1}^{t})
+	\end{align}
 where $\vec{v}_{w_{i+1}^t}$ denotes the row of $V$ corresponding to $w_{i+1}^t$, and so forth.
 \newline
 
-This paper didn't talk about how to build $V$(and the code is directly load it from external file). In our opinion, the vocabulary matrix $V$ is pre-built base on the corpus in the beginning. Besides, we think we can combime it with attention-based model during training. Because base on different words in sentence , the distribution, or say, importance of words should change.
+\par This paper didn't talk about how to build $V$(and the code is directly load it from external file). In our opinion, the vocabulary matrix $V$ is pre-built base on the corpus in the beginning. Besides, we think we can combime it with attention-based model during training. Because for different words in sentence , the distribution, or say, importance of words should change.
 
 \subsection{Objective}
 \par ~~~~During training, we want to maximize this skip-gram-like objective function which defined as follow
-	\[\sum\limits_{t} logP(w_{i+1}^t | w_{i+1}^{<t},\vec{h}_i) + \sum\limits_{t} logP(w_{i-1}^t | w_{i-1}^{<t},\vec{h}_i)\]
+	\begin{align}
+	\sum\limits_{t} logP(w_{i+1}^t | w_{i+1}^{<t},\vec{h}_i) + \sum\limits_{t} logP(w_{i-1}^t | w_{i-1}^{<t},\vec{h}_i)
+\end{align}
 
 \subsection{Vocabulary Expansion}
+\par~~~~This paper proposes a method for unseen vocabulary expansion to solve OOV issue. The key idea is that assume we have a much bigger neural language model $V_{ext}$, which trained on other larger corpus, containing many other OOV in our training corpus. We can use common words in both corpus to construct a mapping $f : V_{int} \to V_{ext}$ ($V_{int}$ is the neural language model trained on skip-thought corpus), 
+parameterized by a matrix $W$ s.t $v_{int} = Wv_{ext}$. So far, this method is pretty elegant, using the transformation between two vector spaces conceptually and semantically; However, we have two questions:
+\newline
+
+\par First, we are confused why not directly use $V_{ext}$ as its word embedding, and this paper explains that it's better use word embedding in skip thought training corpus to avoid expensive computation cost in $(6)$, because it calculats over whole words in vocabulary matrix $V$ in $(5)$.
+\newline
+
+\par In that case, another question occured. Why not just train skip thought on this bigger corpus, we asked. Then, we found a scenario can explain. Take social media for example, we have lots of unrelated and short sentences, containg lots of OOV. They are good corpus to train word embedding like word2vec; However, owing to its weak connectivity between sentences, they are unsuitable for training skip thought.
+
 \subsection{Applicaion}
-	\par~~~~
+	\par~~~~Using such vectors, we can catch the essential in sentence, and use different encoder-decoder trained to apply to specific domain such as machine translation...etc. This paper test these vectors on many tasks, proving that they can generate highly robust and generic sentence representations.
 
 
 
@@ -96,29 +108,25 @@ This paper didn't talk about how to build $V$(and the code is directly load it f
 	This paper introduces concept “attend”, which is the idea of alignment in image capture. When outputs next word, model will choose its sight on the picture to decide which part of image “translated”. The author use a multilayer perceptron to construct an attention model fatt, conditioned on the previous hidden state, to decide value of each location of image and get the weights by sigmoid. Then using attention of “hard” (sight on the location of highest weight) or “soft” (weighted sight) to get the current capture of image.
  	
 \section{Application: Neural Story Teller}
-			\par ~~~~Now, we have a skip-thought vector space $R_{SK}$ with encoder $F_{enc,SK}$ and decoder $F_{dec,SK}$, an image-sentence vector space $R_{IS}$ with embedding function $F_{IS}$, and style-shifhting function $F_S$ to change style in $R_{SK}$
+	\par ~~~~Now, we have a skip-thought vector space $V_{SK}$ with encoder $F_{enc,SK}$ and decoder $F_{dec,SK}$, an image-sentence vector space $V_{IS}$ with embedding function $F_{IS}$, and style-shifhting function $F_S$ to change style in $V_{SK}$
 
-	\[ F_{enc,SK} : \textit{Text} \to R_{SK}\]
-	\[ F_{dec,SK} : R_{SK} \to \textit{Text}\]
-	\[ F_{IS} : \textit{Image} \to R_{IS}\]
-	\[ F_S : R_{SK} \to R_{SK}\]
+	\[ F_{enc,SK} : \textit{Sentence} \to V_{SK}\]
+	\[ F_{dec,SK} : V_{SK} \to \textit{Sentence}\]
+	\[ F_{IS} : \textit{Image} \to V_{IS}\]
+	\[ F_S : V_{SK} \to V_{SK}\]
 	\newline
 
 	\par Given a new image $\vec{x}_{image}$, The basic flow is as follow:
 	\begin{enumerate}
-		\item Map $\vec{x}_{image}$ to $R_{IS}$ by $F_{IS}(\vec{x}_{image}) = \vec{x}_{IS,embed}$
+		\item Map $\vec{x}_{image}$ to $V_{IS}$ by $F_{IS}(\vec{x}_{image}) = \vec{x}_{IS,embed}$
 		\item compute cosine similarity between $\vec{x}_{IS,embed}$ and image-sentence vectors of trained captions $\vec{c}_1 \sim \vec{c}_K$, and choose top $N$ captions' vectors
 		\item Map these capions by Skip thought encoder $F_{enc,SK}(\vec{c}_i) = \vec{c}_{i,embed}$
 		\item Average these $\vec{c}_{i,embed}$ , then we'll get $\vec{x}_{SK,embed}$, the skip-thought vector of image $\vec{x}_{image}$
 		\item Map $\vec{x}_{SK,embed}$ , a caption-syle vector to $\vec{y}_{SK,embed}$ , a corpus-style vector
 	\end{enumerate}
 
-	\par Let $\vec{c}$ be the average vector of captions in $R_{SK}$ , $\vec{b}$ be the average vector of all vectors in $R_{SK}$. Abstractly speaking, we can view $\vec{c}$ and $\vec{b}$ as the corpus-level background vectors, or say, "style". Therefore, a naive method for style shifting is
+	\par Let $\vec{c}$ be the average vector of captions in $V_{SK}$ , $\vec{b}$ be the average vector of all vectors in $V_{SK}$. Abstractly speaking, we can view $\vec{c}$ and $\vec{b}$ as the corpus-level background vectors, or say, "style". Therefore, a naive method for style shifting is
 	\[ F_S(\vec{x}) = \vec{x} - \vec{c} + \vec{b} \]
-
-
-
-
 
 \section{Experiment Result}
 
@@ -174,11 +182,15 @@ right now
 I thought you could forgive me
 
 \section{Conclusion \& Thoughts}
-打一些心得
+\begin{itemize}
+	\item 徐瑞陽 : 
+	\par~~~~After studying this project, I think the essential of it is \textbf{transmation}, between different corpus embedding $V_{int}$ and $V_{ext}$ in vocabulary expansion, between different vector space in connecting $V_{SK}$ and $V_{IS}$. It is difficult to imagine these abstract concept like semantic meaning, document style can use real-valued vector to represent. According to Professor Geoffrey Hinton, "thought vector" will solve the deadlock of AI, making rapid progress in NLP area! I'll try to replace skip thought with treeLSTM with dummy sentiment label implemented by Wei Fang and me (we haven't finished yet) to observe the consequence, train some different corpus (maybe gonfu story in Chinese), and modify the naive style-shifting function by the concept of probabilistic model.
+	\par~~~~ Overall, I enjoyed the learning experience in DSP and special project this semester. Although I've stuck at first time reading these papers, I found that I realized more and more after some time to digest and absorb other concept I studied or heard during this time, and it will turn to the organized knowledge (even with some new idea) for furture study when I stuck on another paper XD.
+\end{itemize}
 
 \section{Basic Information}
 \begin{itemize}
-    \item 徐瑞陽 : Skip-Thought Vector and Neural storyteller Study , modify some neural-storyteller code
+    \item 徐瑞陽 : Skip-Thought Vector and Neural storyteller Study , trace neural-storyteller code
     \item 藍崧文 : 
 \end{itemize}
 \medskip
